@@ -1,0 +1,11 @@
+const assert = require('assert');
+const c = require('../src/core');
+let n = 0; const t = (name, f) => { f(); n++; console.log('ok', name); };
+t('keywords drop stopwords', () => { const k = c.keywords('Add retry to the payment webhook; payment webhook times out'); assert.deepStrictEqual(k.slice(0,2), ['payment','webhook']); assert(!k.includes('the')); });
+t('jql excludes self, scopes project', () => { const j = c.jqlFor('PAY-7', ['payment'], 'PAY'); assert(j.includes('key != "PAY-7"')); assert(j.startsWith('project = "PAY"')); });
+t('jql null without words', () => assert.strictEqual(c.jqlFor('X-1', []), null));
+t('cql targets decisions', () => assert(c.cqlFor(['webhook']).includes('label = "decision"')));
+t('rank issues by overlap', () => { const r = c.rankIssues(['payment','webhook'], [{key:'A-1',fields:{summary:'Login page',status:{name:'Done'}}},{key:'A-2',fields:{summary:'Payment webhook retries',status:{name:'Done',statusCategory:{key:'done'}},assignee:{displayName:'Riya'}}}]); assert.strictEqual(r.length,1); assert.strictEqual(r[0].owner,'Riya'); });
+t('rank pages strips highlight', () => { const p = c.rankPages(['webhook'], [{content:{title:'Decision: webhook retries'},url:'/x',excerpt:'@@@hl@@@webhook@@@endhl@@@ backoff'}], 'https://s'); assert.strictEqual(p[0].url,'https://s/x'); assert(!p[0].excerpt.includes('@@@')); });
+t('summary says when nothing decided', () => assert(c.summarise('A-1', [], []).includes('No recorded decision')));
+console.log(`${n}/7 passed`);
